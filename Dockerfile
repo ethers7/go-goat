@@ -17,16 +17,25 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gogoat .
 
 # Start a new stage from scratch for the runtime
-FROM alpine:latest  
+FROM alpine:latest
 
 # Set the working directory
-WORKDIR /root/
+WORKDIR /app
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/gogoat .
 
 # Add ca-certificates in case your application makes external HTTPS requests
 RUN apk --no-cache add ca-certificates
+
+# Create a non-root user to run the application
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Change ownership of application files to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
 
 # Expose HTTP port
 EXPOSE 8080
